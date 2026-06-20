@@ -1,6 +1,5 @@
 package com.vibecoder.btblocker
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -15,74 +14,78 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
 class BlockerService : Service() {
-
     private val handler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
-    private val channelId = "bt_blocker_channel"
-
+    private var isRunning = false
+    
     private val tick = object : Runnable {
         override fun run() {
+            if (!isRunning) return
+            
             if (!Prefs.isBlocked(this@BlockerService)) {
                 stopSelf()
                 return
             }
-            forceDisableBluetooth()
+            
+            try {
+                // Проверяем и выключаем Bluetooth через API
+                val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+                bm.adapter?.let { 
+                    if (it.isEnabled) {
+                        it.disable()
+                    }
+                }
+            } catch (_: Exception) {}
+            
+            // Дополнительно через root команду
+            RootManager.run("svc bluetooth disable")
+            
             handler.postDelayed(this, 700)
         }
     }
-
+    
     override fun onCreate() {
         super.onCreate()
-        createChannel()
-        startForeground(1, buildNotification())
-
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BTBlocker::lock")
-        wakeLock?.acquire(24 * 60 * 60 * 1000L)
-
-        handler.post(tick)
-    }
-
-    private fun forceDisableBluetooth() {
-        try {
-            val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            bm.adapter?.let { if (it.isEnabled) it.disable() }
-        } catch (_: SecurityException) { }
-
-        RootManager.run("svc bluetooth disable")
-        RootManager.run("settings put global bluetooth_disabled 1")
-    }
-
-    private fun createChannel() {
+        isRunning = true
+        
+        // Создаём канал уведомлений
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val ch = NotificationChannel(
-                channelId,
-                "Bluetooth Blocker",
+            val channel = NotificationChannel(
+                "bt_block",
+                "BT Blocker",
                 NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Сервис блокировки Bluetooth"
-                setShowBadge(false)
-            }
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(ch)
+            )
+            channel.description = "Блокировка Bluetooth"
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-    }
-
-    private fun buildNotification(): Notification {
-        return NotificationCompat.Builder(this, channelId)
+        
+        // Создаём уведомление
+        val notification = NotificationCompat.Builder(this, "bt_block")
             .setContentTitle("Bluetooth заблокирован")
             .setContentText("Сторож активен")
-            .setSmallIcon(R.drawable.ic_bluetooth_block)
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+        
+        startForeground(1, notification)
+        
+        // Блокируем засыпание
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BTBlocker::WakeLock")
+        wakeLock?.acquire(24 * 60 * 60 * 1000L)
+        
+        // Запускаем цикл проверки
+        handler.post(tick)
     }
-
+    
     override fun onBind(intent: Intent?): IBinder? = null
-
+    
     override fun onDestroy() {
+        isRunning = false
         handler.removeCallbacks(tick)
-        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock?.let { 
+            if (it.isHeld) it.release() 
+        }
         super.onDestroy()
     }
 }
