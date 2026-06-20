@@ -22,73 +22,91 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvRoot: TextView
     private lateinit var btnGrantBattery: Button
-
+    
     private val notifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        
         switchBlock = findViewById(R.id.switchBlock)
         switchHard = findViewById(R.id.switchHard)
         tvStatus = findViewById(R.id.tvStatus)
         tvRoot = findViewById(R.id.tvRoot)
         btnGrantBattery = findViewById(R.id.btnBattery)
-
+        
+        // Проверяем root один раз
         val hasRoot = RootManager.checkRoot()
         tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
             if (hasRoot) android.R.color.holo_green_dark else android.R.color.holo_red_dark))
-
+        
         if (!hasRoot) {
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
+            Toast.makeText(this, "Нужен root доступ!", Toast.LENGTH_LONG).show()
+            return
         }
-
+        
+        // Загружаем сохранённое состояние
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
         switchBlock.isChecked = blocked
         switchHard.isChecked = hard
         switchHard.isEnabled = blocked
         updateStatus()
-
+        
+        // Запрос уведомлений (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
                 notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-
+        
+        // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
-            if (!RootManager.checkRoot()) {
-                switchBlock.isChecked = false
-                Toast.makeText(this, "Нужен root!", Toast.LENGTH_SHORT).show()
-                return@setOnCheckedChangeListener
-            }
             Prefs.setBlocked(this, checked)
             switchHard.isEnabled = checked
-            if (checked) startBlocker() else stopBlocker()
-            updateStatus()
-        }
-
-        switchHard.setOnCheckedChangeListener { _, checked ->
-            Prefs.setHardMode(this, checked)
+            
             if (checked) {
-                Snackbar.make(btnGrantBattery,
-                    "Жёсткий режим отключит системное приложение Bluetooth. " +
-                            "Чтобы вернуть — выполни в Termux: pm enable com.android.bluetooth",
-                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
-                RootManager.run("pm disable-user --user 0 com.android.bluetooth")
-                RootManager.run("pm disable-user --user 0 com.android.bluetooth.midipackage")
+                // Запускаем сервис
+                val intent = Intent(this, BlockerService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+                Toast.makeText(this, "Сторож активирован", Toast.LENGTH_SHORT).show()
             } else {
-                RootManager.run("pm enable com.android.bluetooth")
-                RootManager.run("pm enable com.android.bluetooth.midipackage")
+                // Останавливаем сервис
+                stopService(Intent(this, BlockerService::class.java))
+                Toast.makeText(this, "Сторж деактивирован", Toast.LENGTH_SHORT).show()
             }
             updateStatus()
         }
-
+        
+        // Жёсткий режим
+        switchHard.setOnCheckedChangeListener { _, checked ->
+            Prefs.setHardMode(this, checked)
+            
+            if (checked) {
+                RootManager.disableAllBluetoothPackages()
+                Snackbar.make(btnGrantBattery,
+                    "Жёсткий режим активирован. Bluetooth отключён системно.",
+                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
+            } else {
+                RootManager.enableAllBluetoothPackages()
+                Snackbar.make(btnGrantBattery,
+                    "Жёсткий режим отключён. Bluetooth восстановлен.",
+                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
+            }
+            updateStatus()
+        }
+        
+        // Кнопка батареи
         btnGrantBattery.setOnClickListener {
             try {
                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -100,12 +118,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
+    
     override fun onResume() {
         super.onResume()
         updateStatus()
     }
-
+    
     private fun updateStatus() {
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
@@ -114,18 +132,5 @@ class MainActivity : AppCompatActivity() {
             blocked && hard -> "Bluetooth: ЗАБЛОКИРОВАН (жёсткий режим)"
             else -> "Bluetooth: ЗАБЛОКИРОВАН (сторож)"
         }
-    }
-
-    private fun startBlocker() {
-        val intent = Intent(this, BlockerService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
-    }
-
-    private fun stopBlocker() {
-        stopService(Intent(this, BlockerService::class.java))
     }
 }
