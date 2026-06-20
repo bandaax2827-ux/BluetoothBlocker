@@ -1,6 +1,7 @@
 package com.vibecoder.btblocker
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -92,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
-        // Кнопка батареи с fallback для MIUI
+        // Кнопка батареи
         btnGrantBattery.setOnClickListener {
             openBatterySettings()
         }
@@ -119,14 +120,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun openBatterySettings() {
         try {
-            // Способ 1: стандартный intent
             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                 data = Uri.parse("package:$packageName")
             }
             startActivity(intent)
         } catch (e: Exception) {
             try {
-                // Способ 2: fallback для MIUI/Xiaomi
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.parse("package:$packageName")
                 }
