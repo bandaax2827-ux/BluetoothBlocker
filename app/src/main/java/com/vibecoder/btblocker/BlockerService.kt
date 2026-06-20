@@ -17,38 +17,39 @@ class BlockerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var wakeLock: PowerManager.WakeLock? = null
     private var isRunning = false
-    
+
     private val tick = object : Runnable {
         override fun run() {
             if (!isRunning) return
-            
+
             if (!Prefs.isBlocked(this@BlockerService)) {
                 stopSelf()
                 return
             }
-            
+
+            // 1. Через Bluetooth API
             try {
-                // Проверяем и выключаем Bluetooth через API
                 val bm = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-                bm.adapter?.let { 
-                    if (it.isEnabled) {
-                        it.disable()
-                    }
+                bm.adapter?.let {
+                    if (it.isEnabled) it.disable()
                 }
             } catch (_: Exception) {}
-            
-            // Дополнительно через root команду
+
+            // 2. Через root-команды (несколько способов сразу)
+            RootManager.run("settings put global bluetooth_on 0")
             RootManager.run("svc bluetooth disable")
-            
-            handler.postDelayed(this, 700)
+            RootManager.run("am broadcast -a android.bluetooth.adapter.action.REQUEST_DISABLE")
+
+            // Повтор каждые 500 мс (быстрее = надёжнее)
+            handler.postDelayed(this, 500)
         }
     }
-    
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
-        
-        // Создаём канал уведомлений
+
+        // Канал уведомлений
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "bt_block",
@@ -58,34 +59,32 @@ class BlockerService : Service() {
             channel.description = "Блокировка Bluetooth"
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-        
-        // Создаём уведомление
+
+        // Уведомление
         val notification = NotificationCompat.Builder(this, "bt_block")
             .setContentTitle("Bluetooth заблокирован")
             .setContentText("Сторож активен")
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setOngoing(true)
             .build()
-        
+
         startForeground(1, notification)
-        
-        // Блокируем засыпание
+
+        // Wake lock
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BTBlocker::WakeLock")
         wakeLock?.acquire(24 * 60 * 60 * 1000L)
-        
-        // Запускаем цикл проверки
+
+        // Запуск цикла
         handler.post(tick)
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
-    
+
     override fun onDestroy() {
         isRunning = false
         handler.removeCallbacks(tick)
-        wakeLock?.let { 
-            if (it.isHeld) it.release() 
-        }
+        wakeLock?.let { if (it.isHeld) it.release() }
         super.onDestroy()
     }
 }
