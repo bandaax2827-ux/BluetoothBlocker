@@ -17,7 +17,6 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
-
     private lateinit var switchBlock: MaterialSwitch
     private lateinit var switchHard: MaterialSwitch
     private lateinit var tvStatus: TextView
@@ -26,7 +25,7 @@ class MainActivity : AppCompatActivity() {
 
     private val notifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* ничего, просто запросили */ }
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +37,6 @@ class MainActivity : AppCompatActivity() {
         tvRoot = findViewById(R.id.tvRoot)
         btnGrantBattery = findViewById(R.id.btnBattery)
 
-        // Проверка root
         val hasRoot = RootManager.checkRoot()
         tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
@@ -49,7 +47,6 @@ class MainActivity : AppCompatActivity() {
             switchHard.isEnabled = false
         }
 
-        // Загрузка сохранённого состояния
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
         switchBlock.isChecked = blocked
@@ -57,7 +54,6 @@ class MainActivity : AppCompatActivity() {
         switchHard.isEnabled = blocked
         updateStatus()
 
-        // Запрос уведомлений (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
