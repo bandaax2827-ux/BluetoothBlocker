@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         if (!hasRoot) {
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
+            btnSafeDelete.isEnabled = false
+            btnParentalZone.isEnabled = false
         }
 
         // Загрузка состояния
@@ -87,7 +89,6 @@ class MainActivity : AppCompatActivity() {
         // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
             if (isParentalActive) {
-                // Возвращаем предыдущее состояние
                 switchBlock.isChecked = Prefs.isBlocked(this)
                 showSnackbar("🔒 Переключатель заблокирован родительской зоной")
                 return@setOnCheckedChangeListener
@@ -108,7 +109,7 @@ class MainActivity : AppCompatActivity() {
         switchHard.setOnCheckedChangeListener { _, checked ->
             if (isParentalActive) {
                 switchHard.isChecked = Prefs.isHardMode(this)
-                showSnackbar(" Жёсткий режим заблокирован родительской зоной")
+                showSnackbar("🔒 Жёсткий режим заблокирован родительской зоной")
                 return@setOnCheckedChangeListener
             }
 
@@ -182,13 +183,13 @@ class MainActivity : AppCompatActivity() {
                     dialog.dismiss()
                     return@setPositiveButton
                 }
-                
+
                 if (userAnswer == currentAnswer) {
                     // Правильно - переключаем состояние
                     isParentalActive = !isActive
                     Prefs.setParentalZoneActive(this, isParentalActive)
                     updateParentalZoneState()
-                    
+
                     val msg = if (!isActive) {
                         "✅ Правильно! Родительская зона активирована"
                     } else {
@@ -208,11 +209,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateParentalZoneState() {
         if (isParentalActive) {
-            btnParentalZone.text = "🔓 Разблокировать переключатели и удаление"
+            btnParentalZone.text = " Разблокировать переключатели и удаление"
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            
+
             // Физически блокируем переключатели
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
@@ -222,7 +223,7 @@ class MainActivity : AppCompatActivity() {
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, 0xFF9C27B0.toInt()))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            
+
             // Разблокируем переключатели
             switchBlock.isEnabled = RootManager.checkRoot()
             switchHard.isEnabled = switchBlock.isChecked
