@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
@@ -217,7 +219,7 @@ class MainActivity : AppCompatActivity() {
             pm.isIgnoringBatteryOptimizations(packageName)
         } else false
 
-        btnBattery.text = if (isIgnoring) "✅ Уже в исключениях" else "🔋 Разрешить игнорировать батарею"
+        btnBattery.text = if (isIgnoring) "✅ Уже в исключениях" else " Разрешить игнорировать батарею"
         btnBattery.isEnabled = !isIgnoring
     }
 
@@ -265,7 +267,7 @@ class MainActivity : AppCompatActivity() {
         RootManager.run("svc bluetooth enable")
         RootManager.run("settings put global bluetooth_on 1")
 
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        Handler(Looper.getMainLooper()).postDelayed({
             showSnackbar("Bluetooth восстановлен. Удаляем приложение...")
             try {
                 val intent = Intent(Intent.ACTION_DELETE).apply {
