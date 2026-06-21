@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         // Проверка root
         val hasRoot = RootManager.checkRoot()
-        tvRoot.text = if (hasRoot) "✅ Root получен" else " Root не найден"
+        tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
             if (hasRoot) android.R.color.holo_green_dark else android.R.color.holo_red_dark))
 
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
                 switchHard.isChecked = Prefs.isHardMode(this)
-                Toast.makeText(this, " Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🔒 Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
@@ -190,7 +190,8 @@ class MainActivity : AppCompatActivity() {
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "❌ Неправильно! Попробуйте ещё раз", Toast.LENGTH_SHORT).show()
+                    // ИЗМЕНЕНИЕ 1: Показываем правильный ответ
+                    Toast.makeText(this, "❌ Неправильно! Правильный ответ: $currentAnswer", Toast.LENGTH_LONG).show()
                 }
             }
             .setNegativeButton("Отмена") { dialog, _ -> dialog.dismiss() }
@@ -205,11 +206,19 @@ class MainActivity : AppCompatActivity() {
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            // ИЗМЕНЕНИЕ 2: Физическая блокировка переключателей
+            switchBlock.isEnabled = false
+            switchHard.isEnabled = false
+            btnSafeDelete.isEnabled = false
         } else {
             btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_purple))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            // ИЗМЕНЕНИЕ 3: Разблокировка переключателей
+            switchBlock.isEnabled = RootManager.checkRoot()
+            switchHard.isEnabled = switchBlock.isChecked
+            btnSafeDelete.isEnabled = true
         }
     }
 
@@ -246,7 +255,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSafeDeleteDialog() {
         AlertDialog.Builder(this)
-            .setTitle("️ Безопасное удаление")
+            .setTitle("⚠️ Безопасное удаление")
             .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
                     "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
                     "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.\n\n" +
