@@ -13,9 +13,8 @@ class UninstallReceiver : BroadcastReceiver() {
             val packageName = intent.data?.schemeSpecificPart
             if (packageName == context.packageName) {
                 Log.d("UninstallReceiver", "Приложение удаляется, восстанавливаем Bluetooth...")
+                // Восстанавливаем Bluetooth перед удалением
                 RootManager.enableAllBluetoothPackages()
-                RootManager.run("settings put global bluetooth_on 1")
-                RootManager.run("svc bluetooth enable")
             }
         }
     }
