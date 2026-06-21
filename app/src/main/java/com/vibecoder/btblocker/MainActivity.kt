@@ -7,12 +7,15 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -24,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvRoot: TextView
     private lateinit var btnBattery: Button
+    private lateinit var btnSafeDelete: Button
 
     private val notifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -33,11 +37,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Инициализация элементов интерфейса
         switchBlock = findViewById(R.id.switchBlock)
         switchHard = findViewById(R.id.switchHard)
         tvStatus = findViewById(R.id.tvStatus)
         tvRoot = findViewById(R.id.tvRoot)
         btnBattery = findViewById(R.id.btnBattery)
+        btnSafeDelete = findViewById(R.id.btnSafeDelete)
 
         // Проверка root
         val hasRoot = RootManager.checkRoot()
@@ -48,9 +54,10 @@ class MainActivity : AppCompatActivity() {
         if (!hasRoot) {
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
+            btnSafeDelete.isEnabled = false
         }
 
-        // Загрузка состояния
+        // Загрузка сохранённого состояния
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
         switchBlock.isChecked = blocked
@@ -58,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         switchHard.isEnabled = blocked
         updateStatus()
 
-        // Уведомления (Android 13+)
+        // Запрос уведомлений (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -66,7 +73,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Главный переключатель
+        // Главный переключатель (Режим Сторож)
         switchBlock.setOnCheckedChangeListener { _, checked ->
             if (!RootManager.checkRoot()) {
                 switchBlock.isChecked = false
@@ -79,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
-        // Жёсткий режим
+        // Жёсткий режим (отключение системного приложения Bluetooth)
         switchHard.setOnCheckedChangeListener { _, checked ->
             Prefs.setHardMode(this, checked)
             if (checked) {
@@ -101,6 +108,11 @@ class MainActivity : AppCompatActivity() {
             openBatterySettings()
         }
 
+        // Кнопка безопасного удаления
+        btnSafeDelete.setOnClickListener {
+            showSafeDeleteDialog()
+        }
+
         // Обновляем состояние кнопки батареи
         updateBatteryButton()
     }
@@ -108,10 +120,19 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateStatus()
-        updateBatteryButton() // <-- ВАЖНО: обновляем кнопку при возврате
+        updateBatteryButton()
     }
 
-    // Метод обновления состояния кнопки батареи
+    override fun onDestroy() {
+        super.onDestroy()
+        // Если приложение закрывается и был жёсткий режим — восстанавливаем Bluetooth
+        if (Prefs.isHardMode(this)) {
+            RootManager.enableAllBluetoothPackages()
+            Prefs.setHardMode(this, false)
+        }
+    }
+
+    // Обновление текста кнопки батареи
     private fun updateBatteryButton() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val isIgnoring = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -121,14 +142,15 @@ class MainActivity : AppCompatActivity() {
         if (isIgnoring) {
             btnBattery.text = "✅ Уже в исключениях"
             btnBattery.isEnabled = false
-            btnBattery.alpha = 0.5f // Делаем кнопку полупрозрачной (серой)
+            btnBattery.alpha = 0.5f
         } else {
-            btnBattery.text = "Разрешить игнорировать батарею"
+            btnBattery.text = "🔋 Разрешить игнорировать батарею"
             btnBattery.isEnabled = true
             btnBattery.alpha = 1.0f
         }
     }
 
+    // Открытие настроек батареи
     private fun openBatterySettings() {
         try {
             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -136,10 +158,68 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "Не удалось открыть настройки", Toast.LENGTH_SHORT).show()
+            try {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+                Toast.makeText(this, "Найди 'Контроль активности' → 'Без ограничений'", Toast.LENGTH_LONG).show()
+            } catch (e2: Exception) {
+                Toast.makeText(this, "Открой настройки приложения вручную", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
+    // Диалог безопасного удаления
+    private fun showSafeDeleteDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("️ Безопасное удаление")
+            .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
+                    "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
+                    "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.\n\n" +
+                    "Продолжить?")
+            .setPositiveButton("Восстановить и удалить") { _, _ ->
+                performSafeDelete()
+            }
+            .setNegativeButton("Отмена") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    // Выполнение безопасного удаления
+    private fun performSafeDelete() {
+        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
+
+        // 1. Останавливаем сервис блокировки
+        stopBlocker()
+
+        // 2. Сбрасываем настройки
+        Prefs.setBlocked(this, false)
+        Prefs.setHardMode(this, false)
+
+        // 3. Восстанавливаем Bluetooth СИНХРОННО
+        RootManager.enableAllBluetoothPackages()
+        RootManager.run("svc bluetooth enable")
+        RootManager.run("settings put global bluetooth_on 1")
+
+        // 4. Ждём 3 секунды, чтобы команды точно выполнились
+        Handler(Looper.getMainLooper()).postDelayed({
+            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
+
+            // 5. Запускаем удаление приложения
+            try {
+                val intent = Intent(Intent.ACTION_DELETE).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
+            }
+        }, 3000)
+    }
+
+    // Обновление статуса Bluetooth
     private fun updateStatus() {
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
@@ -150,6 +230,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Запуск сервиса блокировки
     private fun startBlocker() {
         val intent = Intent(this, BlockerService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -159,6 +240,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Остановка сервиса блокировки
     private fun stopBlocker() {
         stopService(Intent(this, BlockerService::class.java))
     }
