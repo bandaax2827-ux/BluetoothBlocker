@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         switchBlock.setOnCheckedChangeListener { _, checked ->
             if (Prefs.isParentalZoneActive(this)) {
                 switchBlock.isChecked = Prefs.isBlocked(this)
-                Toast.makeText(this, " Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🔒 Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
         switchHard.setOnCheckedChangeListener { _, checked ->
             if (Prefs.isParentalZoneActive(this)) {
                 switchHard.isChecked = Prefs.isHardMode(this)
-                Toast.makeText(this, " Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🔒 Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
@@ -122,7 +122,7 @@ class MainActivity : AppCompatActivity() {
 
         btnSafeDelete.setOnClickListener {
             if (Prefs.isParentalZoneActive(this)) {
-                Toast.makeText(this, " Удаление заблокировано родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🔒 Удаление заблокировано родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             showSafeDeleteDialog()
@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "❌ Неправильно! Попробуйте ещё раз", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "❌ Неправильно! Правильный ответ: $currentAnswer", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Отмена") { dialog, _ -> dialog.dismiss() }
@@ -189,11 +189,21 @@ class MainActivity : AppCompatActivity() {
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            
+            // ФИЗИЧЕСКАЯ БЛОКИРОВКА переключателей
+            switchBlock.isEnabled = false
+            switchHard.isEnabled = false
+            btnSafeDelete.isEnabled = false
         } else {
             btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, 0xFF9C27B0.toInt()))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            
+            // Разблокировка переключателей
+            switchBlock.isEnabled = RootManager.checkRoot()
+            switchHard.isEnabled = switchBlock.isChecked
+            btnSafeDelete.isEnabled = true
         }
     }
 
@@ -228,7 +238,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSafeDeleteDialog() {
         AlertDialog.Builder(this)
-            .setTitle("️ Безопасное удаление")
+            .setTitle("⚠️ Безопасное удаление")
             .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
                     "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
                     "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.\n\n" +
