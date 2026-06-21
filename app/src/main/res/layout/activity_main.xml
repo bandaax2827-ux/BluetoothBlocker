@@ -27,7 +27,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1.5.3"
+            android:text="1.5.3 made with Qwen from X Banda"
             android:textSize="14sp"
             android:textColor="#888888"
             android:layout_marginBottom="24dp"/>
@@ -176,7 +176,7 @@
                     android:id="@+id/btnBattery"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Разрешить игнорировать батарею"
+                    android:text="🔋 Разрешить игнорировать батарею"
                     android:textSize="14sp"/>
 
             </LinearLayout>
@@ -219,7 +219,7 @@
                     android:id="@+id/btnSafeDelete"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Безопасно удалить"
+                    android:text="🗑️ Безопасно удалить"
                     android:textSize="14sp"
                     android:backgroundTint="#F44336"/>
 
