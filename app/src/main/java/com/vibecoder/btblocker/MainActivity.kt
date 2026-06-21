@@ -42,7 +42,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Инициализация элементов
         switchBlock = findViewById(R.id.switchBlock)
         switchHard = findViewById(R.id.switchHard)
         tvStatus = findViewById(R.id.tvStatus)
@@ -52,9 +51,8 @@ class MainActivity : AppCompatActivity() {
         btnParentalZone = findViewById(R.id.btnParentalZone)
         tvParentalStatus = findViewById(R.id.tvParentalStatus)
 
-        // Проверка root
         val hasRoot = RootManager.checkRoot()
-        tvRoot.text = if (hasRoot) "✅ Root получен" else " Root не найден"
+        tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
             if (hasRoot) android.R.color.holo_green_dark else android.R.color.holo_red_dark))
 
@@ -63,7 +61,6 @@ class MainActivity : AppCompatActivity() {
             switchHard.isEnabled = false
         }
 
-        // Загрузка состояния
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
         switchBlock.isChecked = blocked
@@ -72,7 +69,6 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
         updateParentalZoneState()
 
-        // Уведомления (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -80,13 +76,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
-                // Возвращаем предыдущее состояние
                 switchBlock.isChecked = Prefs.isBlocked(this)
-                Toast.makeText(this, "🔒 Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, " Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
@@ -101,9 +94,7 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
-        // Жёсткий режим
         switchHard.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
                 switchHard.isChecked = Prefs.isHardMode(this)
                 Toast.makeText(this, " Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
@@ -125,21 +116,18 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
-        // Кнопка батареи
         btnBattery.setOnClickListener {
             openBatterySettings()
         }
 
-        // Кнопка безопасного удаления
         btnSafeDelete.setOnClickListener {
             if (Prefs.isParentalZoneActive(this)) {
-                Toast.makeText(this, "🔒 Удаление заблокировано родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, " Удаление заблокировано родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             showSafeDeleteDialog()
         }
 
-        // Кнопка родительской зоны
         btnParentalZone.setOnClickListener {
             showParentalZoneDialog()
         }
@@ -154,12 +142,9 @@ class MainActivity : AppCompatActivity() {
         updateParentalZoneState()
     }
 
-    // ===== РОДИТЕЛЬСКАЯ ЗОНА =====
-
     private fun showParentalZoneDialog() {
         val isActive = Prefs.isParentalZoneActive(this)
 
-        // Генерируем случайный пример из таблицы умножения (2-9 × 2-9)
         val num1 = (2..9).random()
         val num2 = (2..9).random()
         currentAnswer = num1 * num2
@@ -180,7 +165,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Проверить") { _, _ ->
                 val userAnswer = editText.text.toString().toIntOrNull()
                 if (userAnswer == currentAnswer) {
-                    // Правильно - переключаем состояние
                     Prefs.setParentalZoneActive(this, !isActive)
                     updateParentalZoneState()
                     val msg = if (!isActive) {
@@ -207,13 +191,11 @@ class MainActivity : AppCompatActivity() {
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
         } else {
             btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
-            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_purple))
+            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, 0xFF9C27B0.toInt()))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
         }
     }
-
-    // ===== ОСТАЛЬНЫЕ МЕТОДЫ =====
 
     private fun updateBatteryButton() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
