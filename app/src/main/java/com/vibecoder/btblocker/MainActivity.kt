@@ -7,15 +7,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -27,7 +24,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvRoot: TextView
     private lateinit var btnBattery: Button
-    private lateinit var btnSafeDelete: Button
 
     private val notifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -42,8 +38,8 @@ class MainActivity : AppCompatActivity() {
         tvStatus = findViewById(R.id.tvStatus)
         tvRoot = findViewById(R.id.tvRoot)
         btnBattery = findViewById(R.id.btnBattery)
-        btnSafeDelete = findViewById(R.id.btnSafeDelete)
 
+        // Проверка root
         val hasRoot = RootManager.checkRoot()
         tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
@@ -54,6 +50,7 @@ class MainActivity : AppCompatActivity() {
             switchHard.isEnabled = false
         }
 
+        // Загрузка состояния
         val blocked = Prefs.isBlocked(this)
         val hard = Prefs.isHardMode(this)
         switchBlock.isChecked = blocked
@@ -61,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         switchHard.isEnabled = blocked
         updateStatus()
 
+        // Уведомления (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -68,6 +66,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
             if (!RootManager.checkRoot()) {
                 switchBlock.isChecked = false
@@ -80,6 +79,7 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
+        // Жёсткий режим
         switchHard.setOnCheckedChangeListener { _, checked ->
             Prefs.setHardMode(this, checked)
             if (checked) {
@@ -96,69 +96,47 @@ class MainActivity : AppCompatActivity() {
             updateStatus()
         }
 
+        // Кнопка батареи
         btnBattery.setOnClickListener {
-            try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Не удалось открыть настройки", Toast.LENGTH_SHORT).show()
-            }
+            openBatterySettings()
         }
 
-        btnSafeDelete.setOnClickListener {
-            showSafeDeleteDialog()
-        }
-    }
-
-    private fun showSafeDeleteDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("⚠️ Безопасное удаление")
-            .setMessage("Мы восстановим Bluetooth перед удалением приложения. Продолжить?")
-            .setPositiveButton("Восстановить и удалить") { _, _ ->
-                performSafeDelete()
-            }
-            .setNegativeButton("Отмена") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun performSafeDelete() {
-        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
-
-        stopBlocker()
-        Prefs.setBlocked(this, false)
-        Prefs.setHardMode(this, false)
-
-        RootManager.enableAllBluetoothPackages()
-        RootManager.run("svc bluetooth enable")
-        RootManager.run("settings put global bluetooth_on 1")
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
-            try {
-                val intent = Intent(Intent.ACTION_DELETE).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
-            }
-        }, 3000)
+        // Обновляем состояние кнопки батареи
+        updateBatteryButton()
     }
 
     override fun onResume() {
         super.onResume()
         updateStatus()
+        updateBatteryButton() // <-- ВАЖНО: обновляем кнопку при возврате
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        if (Prefs.isHardMode(this)) {
-            RootManager.enableAllBluetoothPackages()
-            Prefs.setHardMode(this, false)
+    // Метод обновления состояния кнопки батареи
+    private fun updateBatteryButton() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pm.isIgnoringBatteryOptimizations(packageName)
+        } else false
+
+        if (isIgnoring) {
+            btnBattery.text = "✅ Уже в исключениях"
+            btnBattery.isEnabled = false
+            btnBattery.alpha = 0.5f // Делаем кнопку полупрозрачной (серой)
+        } else {
+            btnBattery.text = "Разрешить игнорировать батарею"
+            btnBattery.isEnabled = true
+            btnBattery.alpha = 1.0f
+        }
+    }
+
+    private fun openBatterySettings() {
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Не удалось открыть настройки", Toast.LENGTH_SHORT).show()
         }
     }
 
