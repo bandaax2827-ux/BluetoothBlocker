@@ -4,23 +4,24 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 object RootManager {
-    private var rootChecked = false
-    private var rootAvailable = false
+    private var rootAvailable: Boolean? = null
+    private var rootGranted: Boolean = false
 
     fun checkRoot(): Boolean {
-        if (rootChecked) return rootAvailable
+        if (rootAvailable != null) return rootAvailable!!
 
         rootAvailable = try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             val result = reader.readLine()
             process.waitFor()
-            result != null && result.contains("uid=0")
+            val hasRoot = result != null && result.contains("uid=0")
+            if (hasRoot) rootGranted = true
+            hasRoot
         } catch (e: Exception) {
             false
         }
-        rootChecked = true
-        return rootAvailable
+        return rootAvailable!!
     }
 
     fun run(cmd: String): Boolean {
@@ -32,7 +33,9 @@ object RootManager {
             val errReader = BufferedReader(InputStreamReader(process.errorStream))
             while (outReader.readLine() != null) {}
             while (errReader.readLine() != null) {}
-            process.waitFor() == 0
+            val exitCode = process.waitFor()
+            if (exitCode == 0) rootGranted = true
+            exitCode == 0
         } catch (e: Exception) {
             false
         }
@@ -52,8 +55,8 @@ object RootManager {
             run("pm disable $pkg 2>/dev/null")
             run("am force-stop $pkg 2>/dev/null")
         }
-        run("settings put secure enabled_accessibility_services '' 2>/dev/null")
-        run("pkill -f com.android.systemui 2>/dev/null")
+        run("svc bluetooth disable")
+        run("settings put global bluetooth_on 0")
     }
 
     fun enableAllBluetoothPackages() {
@@ -69,6 +72,7 @@ object RootManager {
             run("pm enable $pkg 2>/dev/null")
             run("pm enable --user 0 $pkg 2>/dev/null")
         }
-        run("pkill -f com.android.systemui 2>/dev/null")
+        run("svc bluetooth enable")
+        run("settings put global bluetooth_on 1")
     }
 }
