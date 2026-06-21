@@ -27,7 +27,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1.5.3 made with Qwen from X Banda"
+            android:text="1.5.3"
             android:textSize="14sp"
             android:textColor="#888888"
             android:layout_marginBottom="24dp"/>
@@ -82,6 +82,16 @@
                     android:textSize="16sp"
                     android:padding="8dp"/>
 
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bluetooth: свободен"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="#4CAF50"
+                    android:layout_marginTop="12dp"/>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -129,37 +139,92 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Статус Bluetooth -->
-        <TextView
-            android:id="@+id/tvStatus"
+        <!-- Карточка: Батарея -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Bluetooth: свободен"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textAlignment="center"
-            android:padding="16dp"
             android:layout_marginBottom="16dp"
-            android:background="#FFFFFF"/>
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="#FFFFFF">
 
-        <!-- Кнопка батареи -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnBattery"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔋 Батарея"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#4CAF50"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Чтобы Android не убивал сторожа в фоне, разреши игнорировать оптимизацию батареи."
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="16dp"
+                    android:lineSpacingExtra="4dp"/>
+
+                <Button
+                    android:id="@+id/btnBattery"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Разрешить игнорировать батарею"
+                    android:textSize="14sp"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Карточка: Безопасное удаление -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔋 Разрешить игнорировать батарею"
-            android:textSize="14sp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="#FFFFFF">
 
-        <!-- Подсказка -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="💡 Для работы нужны root-права.\nПриложение не даст Bluetooth включиться."
-            android:textSize="12sp"
-            android:textColor="#888888"
-            android:textAlignment="center"
-            android:layout_marginBottom="24dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🗑️ Безопасное удаление"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#F44336"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение. Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь."
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="16dp"
+                    android:lineSpacingExtra="4dp"/>
+
+                <Button
+                    android:id="@+id/btnSafeDelete"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Безопасно удалить"
+                    android:textSize="14sp"
+                    android:backgroundTint="#F44336"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>
