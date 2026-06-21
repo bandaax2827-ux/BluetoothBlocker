@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
@@ -108,11 +109,24 @@ class MainActivity : AppCompatActivity() {
         btnSafeDelete.setOnClickListener {
             showSafeDeleteDialog()
         }
+
+        updateBatteryButton()
     }
 
     override fun onResume() {
         super.onResume()
         updateStatus()
+        updateBatteryButton()
+    }
+
+    private fun updateBatteryButton() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pm.isIgnoringBatteryOptimizations(packageName)
+        } else false
+
+        btnGrantBattery.text = if (isIgnoring) "✅ Уже в исключениях" else "🔋 Разрешить игнорировать батарею"
+        btnGrantBattery.isEnabled = !isIgnoring
     }
 
     private fun openBatterySettings() {
@@ -139,7 +153,8 @@ class MainActivity : AppCompatActivity() {
             .setTitle("⚠️ Безопасное удаление")
             .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
                     "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
-                    "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.")
+                    "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.\n\n" +
+                    "Продолжить?")
             .setPositiveButton("Восстановить и удалить") { _, _ ->
                 performSafeDelete()
             }
@@ -150,22 +165,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performSafeDelete() {
+        // Показываем сообщение
         Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
 
-        // Восстанавливаем Bluetooth
-        try {
-            RootManager.enableAllBluetoothPackages()
-            Prefs.setBlocked(this, false)
-            Prefs.setHardMode(this, false)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Ошибка восстановления Bluetooth", Toast.LENGTH_SHORT).show()
-        }
+        // 1. Останавливаем сервис блокировки
+        stopBlocker()
 
-        // Ждём 2 секунды, чтобы команды выполнились
+        // 2. Сбрасываем настройки
+        Prefs.setBlocked(this, false)
+        Prefs.setHardMode(this, false)
+
+        // 3. Восстанавливаем Bluetooth СИНХРОННО (ждём завершения каждой команды)
+        RootManager.enableAllBluetoothPackages()
+        RootManager.run("svc bluetooth enable")
+        RootManager.run("settings put global bluetooth_on 1")
+
+        // 4. Ждём 3 секунды, чтобы команды точно выполнились
         Handler(Looper.getMainLooper()).postDelayed({
             Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
 
-            // Запускаем удаление приложения
+            // 5. Запускаем удаление приложения
             try {
                 val intent = Intent(Intent.ACTION_DELETE).apply {
                     data = Uri.parse("package:$packageName")
@@ -174,7 +193,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
             }
-        }, 2000)
+        }, 3000) // 3 секунды задержки
     }
 
     private fun updateStatus() {
