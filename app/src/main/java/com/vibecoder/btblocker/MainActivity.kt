@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvParentalStatus: TextView
 
     private var currentAnswer = 0
+    private var isParentalActive = false
 
     private val notifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -52,9 +53,12 @@ class MainActivity : AppCompatActivity() {
         btnParentalZone = findViewById(R.id.btnParentalZone)
         tvParentalStatus = findViewById(R.id.tvParentalStatus)
 
+        // Загружаем состояние родительской зоны
+        isParentalActive = Prefs.isParentalZoneActive(this)
+
         // Проверка root
         val hasRoot = RootManager.checkRoot()
-        tvRoot.text = if (hasRoot) "✅ Root получен" else " Root не найден"
+        tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
         tvRoot.setTextColor(ContextCompat.getColor(this,
             if (hasRoot) android.R.color.holo_green_dark else android.R.color.holo_red_dark))
 
@@ -82,11 +86,10 @@ class MainActivity : AppCompatActivity() {
 
         // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
-            if (Prefs.isParentalZoneActive(this)) {
+            if (isParentalActive) {
                 // Возвращаем предыдущее состояние
                 switchBlock.isChecked = Prefs.isBlocked(this)
-                Toast.makeText(this, "🔒 Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                showSnackbar("🔒 Переключатель заблокирован родительской зоной")
                 return@setOnCheckedChangeListener
             }
 
@@ -103,24 +106,19 @@ class MainActivity : AppCompatActivity() {
 
         // Жёсткий режим
         switchHard.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
-            if (Prefs.isParentalZoneActive(this)) {
+            if (isParentalActive) {
                 switchHard.isChecked = Prefs.isHardMode(this)
-                Toast.makeText(this, " Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                showSnackbar(" Жёсткий режим заблокирован родительской зоной")
                 return@setOnCheckedChangeListener
             }
 
             Prefs.setHardMode(this, checked)
             if (checked) {
                 RootManager.disableAllBluetoothPackages()
-                Snackbar.make(btnBattery,
-                    "Жёсткий режим активирован. Чтобы вернуть — выключи этот режим.",
-                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
+                showSnackbar("Жёсткий режим активирован")
             } else {
                 RootManager.enableAllBluetoothPackages()
-                Snackbar.make(btnBattery,
-                    "Жёсткий режим отключён. Bluetooth восстановлен.",
-                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
+                showSnackbar("Жёсткий режим отключён. Bluetooth восстановлен")
             }
             updateStatus()
         }
@@ -132,8 +130,8 @@ class MainActivity : AppCompatActivity() {
 
         // Кнопка безопасного удаления
         btnSafeDelete.setOnClickListener {
-            if (Prefs.isParentalZoneActive(this)) {
-                Toast.makeText(this, "🔒 Удаление заблокировано родительской зоной", Toast.LENGTH_SHORT).show()
+            if (isParentalActive) {
+                showSnackbar("🔒 Удаление заблокировано родительской зоной")
                 return@setOnClickListener
             }
             showSafeDeleteDialog()
@@ -157,7 +155,7 @@ class MainActivity : AppCompatActivity() {
     // ===== РОДИТЕЛЬСКАЯ ЗОНА =====
 
     private fun showParentalZoneDialog() {
-        val isActive = Prefs.isParentalZoneActive(this)
+        val isActive = isParentalActive
 
         // Генерируем случайный пример из таблицы умножения (2-9 × 2-9)
         val num1 = (2..9).random()
@@ -177,20 +175,31 @@ class MainActivity : AppCompatActivity() {
             .setTitle("🔐 Родительская проверка")
             .setMessage("Решите пример, чтобы $actionText родительскую зону:\n\n$num1 × $num2 = ?")
             .setView(editText)
-            .setPositiveButton("Проверить") { _, _ ->
+            .setPositiveButton("Проверить") { dialog, _ ->
                 val userAnswer = editText.text.toString().toIntOrNull()
+                if (userAnswer == null) {
+                    showSnackbar("❌ Введите число!")
+                    dialog.dismiss()
+                    return@setPositiveButton
+                }
+                
                 if (userAnswer == currentAnswer) {
                     // Правильно - переключаем состояние
-                    Prefs.setParentalZoneActive(this, !isActive)
+                    isParentalActive = !isActive
+                    Prefs.setParentalZoneActive(this, isParentalActive)
                     updateParentalZoneState()
+                    
                     val msg = if (!isActive) {
                         "✅ Правильно! Родительская зона активирована"
                     } else {
                         "✅ Правильно! Родительская зона отключена"
                     }
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    showSnackbar(msg)
+                    dialog.dismiss()
                 } else {
-                    Toast.makeText(this, "❌ Неправильно! Попробуйте ещё раз", Toast.LENGTH_SHORT).show()
+                    // Неправильно
+                    showSnackbar("❌ Неправильно! Правильный ответ: $currentAnswer")
+                    dialog.dismiss()
                 }
             }
             .setNegativeButton("Отмена") { dialog, _ -> dialog.dismiss() }
@@ -198,22 +207,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateParentalZoneState() {
-        val isActive = Prefs.isParentalZoneActive(this)
-
-        if (isActive) {
+        if (isParentalActive) {
             btnParentalZone.text = "🔓 Разблокировать переключатели и удаление"
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            
+            // Физически блокируем переключатели
+            switchBlock.isEnabled = false
+            switchHard.isEnabled = false
+            btnSafeDelete.isEnabled = false
         } else {
             btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
-            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_purple))
+            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, 0xFF9C27B0.toInt()))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            
+            // Разблокируем переключатели
+            switchBlock.isEnabled = RootManager.checkRoot()
+            switchHard.isEnabled = switchBlock.isChecked
+            btnSafeDelete.isEnabled = true
         }
     }
 
-    // ===== ОСТАЛЬНЫЕ МЕТОДЫ =====
+    // ===== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====
+
+    private fun showSnackbar(message: String) {
+        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+            .setAction("OK") { }
+            .show()
+    }
 
     private fun updateBatteryButton() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -246,7 +269,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSafeDeleteDialog() {
         AlertDialog.Builder(this)
-            .setTitle("️ Безопасное удаление")
+            .setTitle("⚠️ Безопасное удаление")
             .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
                     "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
                     "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.\n\n" +
@@ -261,7 +284,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performSafeDelete() {
-        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
+        showSnackbar("Восстанавливаем Bluetooth...")
 
         stopBlocker()
         Prefs.setBlocked(this, false)
@@ -272,14 +295,14 @@ class MainActivity : AppCompatActivity() {
         RootManager.run("settings put global bluetooth_on 1")
 
         Handler(Looper.getMainLooper()).postDelayed({
-            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
+            showSnackbar("Bluetooth восстановлен. Удаляем приложение...")
             try {
                 val intent = Intent(Intent.ACTION_DELETE).apply {
                     data = Uri.parse("package:$packageName")
                 }
                 startActivity(intent)
             } catch (e: Exception) {
-                Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
+                showSnackbar("Не удалось запустить удаление")
             }
         }, 3000)
     }
