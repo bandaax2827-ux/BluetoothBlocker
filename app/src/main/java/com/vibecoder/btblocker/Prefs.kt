@@ -1,19 +1,46 @@
 package com.vibecoder.btblocker
 
 import android.content.Context
-import android.content.SharedPreferences
 
 object Prefs {
-    private const val NAME = "bt_blocker_prefs"
+    private const val PREFS_NAME = "bt_blocker_prefs"
     private const val KEY_BLOCKED = "blocked"
-    private const val KEY_HARD = "hard_mode"
+    private const val KEY_HARD_MODE = "hard_mode"
+    private const val KEY_PARENTAL_ZONE = "parental_zone"
 
-    private fun p(c: Context): SharedPreferences =
-        c.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+    fun isBlocked(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_BLOCKED, false)
+    }
 
-    fun isBlocked(c: Context): Boolean = p(c).getBoolean(KEY_BLOCKED, false)
-    fun setBlocked(c: Context, v: Boolean) = p(c).edit().putBoolean(KEY_BLOCKED, v).apply()
+    fun setBlocked(context: Context, blocked: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_BLOCKED, blocked)
+            .apply()
+    }
 
-    fun isHardMode(c: Context): Boolean = p(c).getBoolean(KEY_HARD, false)
-    fun setHardMode(c: Context, v: Boolean) = p(c).edit().putBoolean(KEY_HARD, v).apply()
+    fun isHardMode(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_HARD_MODE, false)
+    }
+
+    fun setHardMode(context: Context, hardMode: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_HARD_MODE, hardMode)
+            .apply()
+    }
+
+    fun isParentalZoneActive(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_PARENTAL_ZONE, false)
+    }
+
+    fun setParentalZoneActive(context: Context, active: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_PARENTAL_ZONE, active)
+            .apply()
+    }
 }
