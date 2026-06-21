@@ -1,11 +1,13 @@
 package com.vibecoder.btblocker
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
@@ -15,13 +17,16 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.snackbar.Snackbar
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private lateinit var switchBlock: MaterialSwitch
     private lateinit var switchHard: MaterialSwitch
     private lateinit var tvStatus: TextView
     private lateinit var tvRoot: TextView
-    private lateinit var btnBattery: Button
+    private lateinit var btnGrantBattery: Button
     private lateinit var btnSafeDelete: Button
 
     private val notifPermission = registerForActivityResult(
@@ -36,7 +41,7 @@ class MainActivity : AppCompatActivity() {
         switchHard = findViewById(R.id.switchHard)
         tvStatus = findViewById(R.id.tvStatus)
         tvRoot = findViewById(R.id.tvRoot)
-        btnBattery = findViewById(R.id.btnBattery)
+        btnGrantBattery = findViewById(R.id.btnBattery)
         btnSafeDelete = findViewById(R.id.btnSafeDelete)
 
         // Проверка root
@@ -84,24 +89,21 @@ class MainActivity : AppCompatActivity() {
             Prefs.setHardMode(this, checked)
             if (checked) {
                 RootManager.disableAllBluetoothPackages()
-                Toast.makeText(this, "Жёсткий режим активирован", Toast.LENGTH_SHORT).show()
+                Snackbar.make(btnGrantBattery,
+                    "Жёсткий режим активирован. Чтобы вернуть — выключи этот режим.",
+                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
             } else {
                 RootManager.enableAllBluetoothPackages()
-                Toast.makeText(this, "Жёсткий режим отключён. Bluetooth восстановлен.", Toast.LENGTH_SHORT).show()
+                Snackbar.make(btnGrantBattery,
+                    "Жёсткий режим отключён. Bluetooth восстановлен.",
+                    Snackbar.LENGTH_LONG).setAction("OK"){}.show()
             }
             updateStatus()
         }
 
         // Кнопка батареи
-        btnBattery.setOnClickListener {
-            try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Не удалось открыть настройки", Toast.LENGTH_SHORT).show()
-            }
+        btnGrantBattery.setOnClickListener {
+            openBatterySettings()
         }
 
         // Кнопка безопасного удаления
@@ -110,11 +112,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateStatus()
+        updateBatteryButton()
+    }
+
+    private fun updateBatteryButton() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pm.isIgnoringBatteryOptimizations(packageName)
+        } else false
+
+        btnGrantBattery.text = if (isIgnoring) "✅ Уже в исключениях" else "🔋 Разрешить игнорировать батарею"
+        btnGrantBattery.isEnabled = !isIgnoring
+    }
+
+    private fun openBatterySettings() {
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+                Toast.makeText(this, "Найди 'Контроль активности' → 'Без ограничений'", Toast.LENGTH_LONG).show()
+            } catch (e2: Exception) {
+                Toast.makeText(this, "Открой настройки приложения вручную", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun showSafeDeleteDialog() {
         AlertDialog.Builder(this)
-            .setTitle("⚠️ Безопасное удаление")
-            .setMessage("Мы восстановим Bluetooth перед удалением приложения. Продолжить?")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle("🗑️ Безопасное удаление")
+            .setMessage("Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение.\n\n" +
+                    "Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, " +
+                    "иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь.")
+            .setPositiveButton("Восстановить и удалить") { _, _ ->
                 performSafeDelete()
             }
             .setNegativeButton("Отмена") { dialog, _ ->
@@ -124,18 +163,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performSafeDelete() {
-        // Восстанавливаем Bluetooth
-        try {
-            RootManager.enableAllBluetoothPackages()
-            Prefs.setBlocked(this, false)
-            Prefs.setHardMode(this, false)
-            stopBlocker()
-            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Ошибка восстановления Bluetooth", Toast.LENGTH_SHORT).show()
-        }
+        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
 
-        // Запускаем удаление приложения
+        // 1. Останавливаем сервис блокировки
+        stopBlocker()
+
+        // 2. Сбрасываем настройки
+        Prefs.setBlocked(this, false)
+        Prefs.setHardMode(this, false)
+
+        // 3. Восстанавливаем Bluetooth пакеты через root (СИНХРОННО!)
+        // Используем CountDownLatch чтобы дождаться выполнения команд
+        val latch = CountDownLatch(1)
+
+        Thread {
+            try {
+                // Восстанавливаем все BT пакеты
+                RootManager.enableAllBluetoothPackages()
+
+                // Дополнительно — явно включаем Bluetooth
+                RootManager.run("svc bluetooth enable")
+                RootManager.run("settings put global bluetooth_on 1")
+
+                // Даем время на выполнение
+                Thread.sleep(1500)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                latch.countDown()
+            }
+        }.start()
+
+        // Ждем максимум 5 секунд
+        latch.await(5, TimeUnit.SECONDS)
+
+        Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
+
+        // 4. Запускаем удаление приложения
         try {
             val intent = Intent(Intent.ACTION_DELETE).apply {
                 data = Uri.parse("package:$packageName")
@@ -146,18 +210,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        updateStatus()
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        // Если приложение закрывается и был жёсткий режим — восстанавливаем Bluetooth
-        if (Prefs.isHardMode(this)) {
-            RootManager.enableAllBluetoothPackages()
-            Prefs.setHardMode(this, false)
-        }
     }
 
     private fun updateStatus() {
