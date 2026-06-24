@@ -4,13 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#F5F5F5">
+    android:background="#F5F5F5"
+    android:scrollbars="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="16dp"
         android:gravity="center_horizontal">
 
         <!-- Заголовок -->
@@ -18,34 +19,37 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Bluetooth Blocker"
-            android:textSize="28sp"
+            android:textSize="26sp"
             android:textStyle="bold"
             android:textColor="#1E88E5"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="4dp"/>
 
         <!-- Версия -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1.8.0 made with Qwen from X BandaXD YouTube"
-            android:textSize="14sp"
+            android:text="1.8.0.1 made with Qwen from X Banda"
+            android:textSize="13sp"
             android:textColor="#888888"
-            android:layout_marginBottom="24dp"/>
+            android:layout_marginBottom="16dp"/>
 
         <!-- Статус Root -->
         <TextView
             android:id="@+id/tvRoot"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Проверка root..."
-            android:textSize="16sp"
-            android:layout_marginBottom="24dp"/>
+            android:textSize="15sp"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="#E3F2FD"
+            android:layout_marginBottom="12dp"/>
 
         <!-- Карточка: Главный переключатель -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#FFFFFF">
@@ -54,43 +58,43 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="️ Режим Сторож"
-                    android:textSize="18sp"
+                    android:text="🛡️ Режим Сторож"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="#1E88E5"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Постоянно следит за Bluetooth и отключает его при включении"
                     android:textSize="13sp"
                     android:textColor="#666666"
-                    android:layout_marginBottom="16dp"
-                    android:lineSpacingExtra="4dp"/>
+                    android:layout_marginBottom="12dp"/>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchBlock"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Заблокировать Bluetooth"
-                    android:textSize="16sp"
-                    android:padding="8dp"/>
+                    android:textSize="15sp"
+                    android:padding="4dp"/>
 
                 <TextView
                     android:id="@+id/tvStatus"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Bluetooth: свободен"
-                    android:textSize="15sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="#4CAF50"
-                    android:layout_marginTop="12dp"/>
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -99,7 +103,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#FFFFFF">
@@ -108,33 +112,32 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="️ Жёсткий режим"
-                    android:textSize="18sp"
+                    android:text="⚠️ Жёсткий режим"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="#FF9800"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Отключает системное приложение Bluetooth. Кнопки BT исчезнут. Чтобы вернуть — выключи этот режим."
                     android:textSize="13sp"
                     android:textColor="#666666"
-                    android:layout_marginBottom="16dp"
-                    android:lineSpacingExtra="4dp"/>
+                    android:layout_marginBottom="12dp"/>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchHard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Жёсткий режим"
-                    android:textSize="16sp"
-                    android:padding="8dp"/>
+                    android:textSize="15sp"
+                    android:padding="4dp"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -143,7 +146,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#FFFFFF">
@@ -152,25 +155,24 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔋 Батарея"
-                    android:textSize="18sp"
+                    android:text=" Батарея"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="#4CAF50"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Чтобы Android не убивал сторожа в фоне, разреши игнорировать оптимизацию батареи."
                     android:textSize="13sp"
                     android:textColor="#666666"
-                    android:layout_marginBottom="16dp"
-                    android:lineSpacingExtra="4dp"/>
+                    android:layout_marginBottom="12dp"/>
 
                 <Button
                     android:id="@+id/btnBattery"
@@ -182,11 +184,11 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Карточка: Родительская зона (НОВАЯ) -->
+        <!-- Карточка: Родительская зона -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#FFFFFF">
@@ -195,43 +197,43 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="‍👩‍ Родительская зона"
-                    android:textSize="18sp"
+                    android:text="👨‍👩‍👧 Родительская зона"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="#9C27B0"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Для родителей: Ваш ребёнок подключает устройства и телефоны по блютуз? Он перекидывается файлами с чужими телефонами? Просто включите блокировку блютуза и заблокируйте переключатели и удаление, чтобы ребёнок не мог подключиться по Bluetooth и не мог удалить блокировщик."
+                    android:text="Ваш ребёнок подключает устройства по Bluetooth? Включите блокировку и заблокируйте переключатели и удаление, чтобы ребёнок не мог подключиться и не мог удалить блокировщик."
                     android:textSize="13sp"
                     android:textColor="#666666"
-                    android:layout_marginBottom="16dp"
-                    android:lineSpacingExtra="4dp"/>
+                    android:layout_marginBottom="12dp"/>
 
                 <Button
                     android:id="@+id/btnParentalZone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text=" Блокировать переключатели и удаление"
+                    android:text="🔒 Блокировать переключатели и удаление"
                     android:textSize="14sp"
                     android:backgroundTint="#9C27B0"/>
 
                 <TextView
                     android:id="@+id/tvParentalStatus"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Родительская зона: выключена"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="#F44336"
-                    android:layout_marginTop="12dp"/>
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -240,7 +242,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#FFFFFF">
@@ -249,25 +251,24 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🗑️ Безопасное удаление"
-                    android:textSize="18sp"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="#F44336"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Это безопасное удаление. Мы восстановим Bluetooth, прежде чем удалить приложение. Не рекомендуем удалять вручную, если вы не выключили блокировку Bluetooth, иначе вы потеряете Bluetooth навсегда и переустановка приложения может не помочь."
+                    android:text="Мы восстановим Bluetooth, прежде чем удалить приложение. Не удаляйте вручную, если не выключили блокировку — потеряете Bluetooth навсегда."
                     android:textSize="13sp"
                     android:textColor="#666666"
-                    android:layout_marginBottom="16dp"
-                    android:lineSpacingExtra="4dp"/>
+                    android:layout_marginBottom="12dp"/>
 
                 <Button
                     android:id="@+id/btnSafeDelete"
