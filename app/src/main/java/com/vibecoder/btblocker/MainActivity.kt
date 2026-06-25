@@ -269,29 +269,37 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun performSafeDelete() {
-        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
+private fun performSafeDelete() {
+    Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
 
-        stopBlocker()
-        Prefs.setBlocked(this, false)
-        Prefs.setHardMode(this, false)
+    stopBlocker()
+    Prefs.setBlocked(this, false)
+    Prefs.setHardMode(this, false)
 
-        RootManager.enableAllBluetoothPackages()
-        RootManager.run("svc bluetooth enable")
-                RootManager.run("am force-stop com.android.bluetooth")
+    // Сбрасываем переключатели в UI
+    switchBlock.isChecked = false
+    switchHard.isChecked = false
+    switchHard.isEnabled = false
+    updateStatus()
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
-            try {
-                val intent = Intent(Intent.ACTION_DELETE).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
+    // Восстанавливаем Bluetooth
+    RootManager.enableAllBluetoothPackages()
+    RootManager.run("svc bluetooth enable")
+    RootManager.run("settings put global bluetooth_on 1")
+    RootManager.run("am force-stop com.android.bluetooth")
+
+    Handler(Looper.getMainLooper()).postDelayed({
+        Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
+        try {
+            val intent = Intent(Intent.ACTION_DELETE).apply {
+                data = Uri.parse("package:$packageName")
             }
-        }, 5000)
-    }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
+        }
+    }, 5000)
+}
 
     override fun onDestroy() {
         super.onDestroy()
