@@ -82,9 +82,7 @@ class MainActivity : AppCompatActivity() {
 
         // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
-                // Возвращаем предыдущее состояние
                 switchBlock.isChecked = Prefs.isBlocked(this)
                 Toast.makeText(this, "🔒 Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
@@ -103,7 +101,6 @@ class MainActivity : AppCompatActivity() {
 
         // Жёсткий режим
         switchHard.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
                 switchHard.isChecked = Prefs.isHardMode(this)
                 Toast.makeText(this, "🔒 Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
@@ -159,7 +156,6 @@ class MainActivity : AppCompatActivity() {
     private fun showParentalZoneDialog() {
         val isActive = Prefs.isParentalZoneActive(this)
 
-        // Генерируем случайный пример из таблицы умножения (2-9 × 2-9)
         val num1 = (2..9).random()
         val num2 = (2..9).random()
         currentAnswer = num1 * num2
@@ -180,7 +176,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Проверить") { _, _ ->
                 val userAnswer = editText.text.toString().toIntOrNull()
                 if (userAnswer == currentAnswer) {
-                    // Правильно - переключаем состояние
                     Prefs.setParentalZoneActive(this, !isActive)
                     updateParentalZoneState()
                     val msg = if (!isActive) {
@@ -190,7 +185,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 } else {
-                    // ИЗМЕНЕНИЕ 1: Показываем правильный ответ
                     Toast.makeText(this, "❌ Неправильно! Правильный ответ: $currentAnswer", Toast.LENGTH_LONG).show()
                 }
             }
@@ -206,16 +200,18 @@ class MainActivity : AppCompatActivity() {
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            // ИЗМЕНЕНИЕ 2: Физическая блокировка переключателей
+            
+            // Физическая блокировка
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
             btnSafeDelete.isEnabled = false
         } else {
             btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
-            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_purple))
+            btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, 0xFF9C27B0.toInt()))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            // ИЗМЕНЕНИЕ 3: Разблокировка переключателей
+            
+            // Разблокировка
             switchBlock.isEnabled = RootManager.checkRoot()
             switchHard.isEnabled = switchBlock.isChecked
             btnSafeDelete.isEnabled = true
@@ -276,9 +272,11 @@ class MainActivity : AppCompatActivity() {
         Prefs.setBlocked(this, false)
         Prefs.setHardMode(this, false)
 
+        // Восстановление Bluetooth
         RootManager.enableAllBluetoothPackages()
         RootManager.run("svc bluetooth enable")
         RootManager.run("settings put global bluetooth_on 1")
+        RootManager.run("am force-stop com.android.bluetooth")
 
         Handler(Looper.getMainLooper()).postDelayed({
             Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
@@ -290,7 +288,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
             }
-        }, 3000)
+        }, 5000) // Задержка 5 секунд
     }
 
     override fun onDestroy() {
