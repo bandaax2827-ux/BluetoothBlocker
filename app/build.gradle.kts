@@ -11,8 +11,8 @@ android {
         applicationId = "com.vibecoder.btblocker"
         minSdk = 24
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.8.0.1"
+        versionCode = 9
+        versionName = "1.8.1.1"
     }
 
     buildTypes {
