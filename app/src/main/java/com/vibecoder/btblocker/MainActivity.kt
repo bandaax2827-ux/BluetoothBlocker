@@ -52,13 +52,22 @@ class MainActivity : AppCompatActivity() {
         btnParentalZone = findViewById(R.id.btnParentalZone)
         tvParentalStatus = findViewById(R.id.tvParentalStatus)
 
-        // Проверка root
+        // Проверка root ИЛИ Shizuku
         val hasRoot = RootManager.checkRoot()
-        tvRoot.text = if (hasRoot) "✅ Root получен" else "❌ Root не найден"
-        tvRoot.setTextColor(ContextCompat.getColor(this,
-            if (hasRoot) android.R.color.holo_green_dark else android.R.color.holo_red_dark))
+        val hasShizuku = ShizukuManager.isShizukuInstalled(this) && ShizukuManager.isShizukuRunning()
 
-        if (!hasRoot) {
+        if (hasRoot) {
+            tvRoot.text = "✅ Root получен"
+            tvRoot.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+        } else if (hasShizuku) {
+            tvRoot.text = "✅ Shizuku активен"
+            tvRoot.setTextColor(ContextCompat.getColor(this, android.R.color.holo_blue_dark))
+        } else {
+            tvRoot.text = "❌ Нет root и Shizuku"
+            tvRoot.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+        }
+
+        if (!hasRoot && !hasShizuku) {
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
         }
@@ -82,17 +91,15 @@ class MainActivity : AppCompatActivity() {
 
         // Главный переключатель
         switchBlock.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
-                // Возвращаем предыдущее состояние
                 switchBlock.isChecked = Prefs.isBlocked(this)
                 Toast.makeText(this, "🔒 Переключатель заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
-            if (!RootManager.checkRoot()) {
+            if (!RootManager.hasPrivileges(this)) {
                 switchBlock.isChecked = false
-                Toast.makeText(this, "Нужен root!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Нужен root или Shizuku!", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
             Prefs.setBlocked(this, checked)
@@ -103,10 +110,9 @@ class MainActivity : AppCompatActivity() {
 
         // Жёсткий режим
         switchHard.setOnCheckedChangeListener { _, checked ->
-            // Проверка родительской зоны
             if (Prefs.isParentalZoneActive(this)) {
                 switchHard.isChecked = Prefs.isHardMode(this)
-                Toast.makeText(this, "🔒 Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, " Жёсткий режим заблокирован родительской зоной", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
 
@@ -159,7 +165,6 @@ class MainActivity : AppCompatActivity() {
     private fun showParentalZoneDialog() {
         val isActive = Prefs.isParentalZoneActive(this)
 
-        // Генерируем случайный пример из таблицы умножения (2-9 × 2-9)
         val num1 = (2..9).random()
         val num2 = (2..9).random()
         currentAnswer = num1 * num2
@@ -180,7 +185,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Проверить") { _, _ ->
                 val userAnswer = editText.text.toString().toIntOrNull()
                 if (userAnswer == currentAnswer) {
-                    // Правильно - переключаем состояние
                     Prefs.setParentalZoneActive(this, !isActive)
                     updateParentalZoneState()
                     val msg = if (!isActive) {
@@ -190,7 +194,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 } else {
-                    // ИЗМЕНЕНИЕ 1: Показываем правильный ответ
                     Toast.makeText(this, "❌ Неправильно! Правильный ответ: $currentAnswer", Toast.LENGTH_LONG).show()
                 }
             }
@@ -206,17 +209,15 @@ class MainActivity : AppCompatActivity() {
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             tvParentalStatus.text = "Родительская зона: АКТИВНА 🔒"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            // ИЗМЕНЕНИЕ 2: Физическая блокировка переключателей
             switchBlock.isEnabled = false
             switchHard.isEnabled = false
             btnSafeDelete.isEnabled = false
         } else {
-            btnParentalZone.text = "🔒 Блокировать переключатели и удаление"
+            btnParentalZone.text = " Блокировать переключатели и удаление"
             btnParentalZone.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_purple))
             tvParentalStatus.text = "Родительская зона: выключена"
             tvParentalStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            // ИЗМЕНЕНИЕ 3: Разблокировка переключателей
-            switchBlock.isEnabled = RootManager.checkRoot()
+            switchBlock.isEnabled = RootManager.hasPrivileges(this)
             switchHard.isEnabled = switchBlock.isChecked
             btnSafeDelete.isEnabled = true
         }
@@ -230,7 +231,7 @@ class MainActivity : AppCompatActivity() {
             pm.isIgnoringBatteryOptimizations(packageName)
         } else false
 
-        btnBattery.text = if (isIgnoring) "✅ Уже в исключениях" else "🔋 Разрешить игнорировать батарею"
+        btnBattery.text = if (isIgnoring) "✅ Уже в исключениях" else " Разрешить игнорировать батарею"
         btnBattery.isEnabled = !isIgnoring
     }
 
@@ -269,37 +270,35 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-private fun performSafeDelete() {
-    Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
+    private fun performSafeDelete() {
+        Toast.makeText(this, "Восстанавливаем Bluetooth...", Toast.LENGTH_SHORT).show()
 
-    stopBlocker()
-    Prefs.setBlocked(this, false)
-    Prefs.setHardMode(this, false)
+        stopBlocker()
+        Prefs.setBlocked(this, false)
+        Prefs.setHardMode(this, false)
 
-    // Сбрасываем переключатели в UI
-    switchBlock.isChecked = false
-    switchHard.isChecked = false
-    switchHard.isEnabled = false
-    updateStatus()
+        switchBlock.isChecked = false
+        switchHard.isChecked = false
+        switchHard.isEnabled = false
+        updateStatus()
 
-    // Восстанавливаем Bluetooth
-    RootManager.enableAllBluetoothPackages()
-    RootManager.run("svc bluetooth enable")
-    RootManager.run("settings put global bluetooth_on 1")
-    RootManager.run("am force-stop com.android.bluetooth")
+        RootManager.enableAllBluetoothPackages()
+        RootManager.run("svc bluetooth enable")
+        RootManager.run("settings put global bluetooth_on 1")
+        RootManager.run("am force-stop com.android.bluetooth")
 
-    Handler(Looper.getMainLooper()).postDelayed({
-        Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
-        try {
-            val intent = Intent(Intent.ACTION_DELETE).apply {
-                data = Uri.parse("package:$packageName")
+        Handler(Looper.getMainLooper()).postDelayed({
+            Toast.makeText(this, "Bluetooth восстановлен. Удаляем приложение...", Toast.LENGTH_LONG).show()
+            try {
+                val intent = Intent(Intent.ACTION_DELETE).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
             }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Не удалось запустить удаление", Toast.LENGTH_SHORT).show()
-        }
-    }, 5000)
-}
+        }, 5000)
+    }
 
     override fun onDestroy() {
         super.onDestroy()
